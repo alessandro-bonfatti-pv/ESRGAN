@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from email.policy import strict
 import logging
 import sys
 from collections import OrderedDict
@@ -53,6 +54,8 @@ class Upscale:
     alpha_threshold: float = None
     alpha_boundary_offset: float = None
     alpha_mode: AlphaOptions = None
+    extension: str = '.png'
+    jpeg_quality: int = 95
     log: logging.Logger = None
 
     device: torch.device = None
@@ -85,6 +88,8 @@ class Upscale:
         alpha_threshold: float = 0.5,
         alpha_boundary_offset: float = 0.2,
         alpha_mode: Optional[AlphaOptions] = None,
+        extension: str = '.png',
+        jpeg_quality: int = 95,
         log: logging.Logger = logging.getLogger(),
     ) -> None:
         self.model_str = model
@@ -103,6 +108,9 @@ class Upscale:
         self.alpha_threshold = alpha_threshold
         self.alpha_boundary_offset = alpha_boundary_offset
         self.alpha_mode = alpha_mode
+        self.extension = extension,
+        self.jpeg_quality = jpeg_quality,
+
         self.log = log
         if self.fp16:
             torch.set_default_tensor_type(
@@ -174,7 +182,7 @@ class Upscale:
             for idx, img_path in enumerate(images, 1):
                 img_input_path_rel = img_path.relative_to(self.input)
                 output_dir = self.output.joinpath(img_input_path_rel).parent
-                img_output_path_rel = output_dir.joinpath(f"{img_path.stem}.png")
+                img_output_path_rel = output_dir.joinpath(f"{img_path.stem}{self.extension[0]}")
                 output_dir.mkdir(parents=True, exist_ok=True)
                 if len(model_chain) == 1:
                     self.log.info(
@@ -241,8 +249,10 @@ class Upscale:
 
                 if self.seamless:
                     rlt = self.crop_seamless(rlt, final_scale)
-
-                cv2.imwrite(str(img_output_path_rel.absolute()), rlt)
+                if (self.extension.casefold() == ".jpg" or self.extension.casefold() == ".jpeg"):
+                    cv2.imwrite(str(img_output_path_rel.absolute()), rlt, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                else:
+                    cv2.imwrite(str(img_output_path_rel.absolute()), rlt)
 
                 if self.delete_input:
                     img_path.unlink(missing_ok=True)
@@ -536,6 +546,18 @@ def main(
         "-v",
         help="Verbose mode",
     ),
+    extension: str = typer.Option(
+        ".png",
+        "--extension",
+        "-ext",
+        help=".jpg or .png",
+    ),
+    jpeg_quality: int = typer.Option(
+        95,
+        "--jpeg-quality",
+        "-jq",
+        help="Only used when extension is jpg. Defines the JPEG quality parameter (0-100)",
+    ),
 ):
 
     logging.basicConfig(
@@ -563,6 +585,8 @@ def main(
         alpha_threshold=alpha_threshold,
         alpha_boundary_offset=alpha_boundary_offset,
         alpha_mode=alpha_mode,
+        extension=extension,
+        jpeg_quality=jpeg_quality
     )
     upscale.run()
 
