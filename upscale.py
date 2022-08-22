@@ -249,8 +249,8 @@ class Upscale:
 
                 if self.seamless:
                     rlt = self.crop_seamless(rlt, final_scale)
-                if (self.extension.casefold() == ".jpg" or self.extension.casefold() == ".jpeg"):
-                    cv2.imwrite(str(img_output_path_rel.absolute()), rlt, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                if (self.extension[0] == ".jpg" or self.extension[0] == ".jpeg"):
+                    cv2.imwrite(str(img_output_path_rel.absolute()), rlt, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality[0]])
                 else:
                     cv2.imwrite(str(img_output_path_rel.absolute()), rlt)
 
